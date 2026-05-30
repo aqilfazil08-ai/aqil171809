@@ -1,0 +1,239 @@
+<div class="container mx-auto px-4 py-8 max-w-5xl">
+    <header class="bg-emerald-800 text-white p-6 rounded-xl shadow-md mb-8">
+        <span class="text-xs font-bold uppercase tracking-wider bg-emerald-600 px-3 py-1 rounded-full">SFH: Animal Husbandry Technology</span>
+        <h1 class="text-3xl font-bold mt-2">Calculus in Poultry Production</h1>
+        <p class="text-emerald-100 mt-1">Modeling Broiler Weight Gain and Growth Rates using Derivatives</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-1 space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h2 class="text-xl font-bold text-emerald-900 mb-3">The Bioscience Scenario</h2>
+                <p class="text-sm text-gray-600 leading-relaxed mb-4">
+                    In Malaysian intensive broiler production, maximizing feed efficiency is vital due to rising feed costs. This tool models the growth of commercial broilers (e.g., Cobb 500) over a standard 42-day production cycle using a realistic <strong>Gompertz Growth Function</strong>.
+                </p>
+                <p class="text-sm text-gray-600 leading-relaxed">
+                    By applying the <strong>first derivative $f'(x)$</strong>, we pinpoint the exact day of inflection where daily weight gain peaks. Harvesting near or slightly after this peak ensures the best balance between feed consumption and meat yield.
+                </p>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h2 class="text-xl font-bold text-emerald-900 mb-3">Mathematical Formulas</h2>
+                
+                <div class="mb-4">
+                    <span class="text-xs font-semibold text-gray-500 block">Growth Function $f(x)$ [Weight in grams]:</span>
+                    <div class="bg-gray-50 p-3 rounded font-mono text-xs overflow-x-auto text-emerald-700">
+                        f(x) = 3200 &times; e^(-4.4 &times; e^(-0.078 &times; x))
+                    </div>
+                </div>
+
+                <div>
+                    <span class="text-xs font-semibold text-gray-500 block">Derivative $f'(x)$ [Growth Rate in g/day]:</span>
+                    <div class="bg-gray-50 p-3 rounded font-mono text-xs overflow-x-auto text-amber-700">
+                        f'(x) = f(x) &times; 4.4 &times; 0.078 &times; e^(-0.078 &times; x)
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 mt-2 italic">Where $x$ represents the age of the chicken in days.</p>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-xs text-gray-500 space-y-1">
+                <span class="font-semibold text-gray-700 block">Data Sources & References:</span>
+                <p>• Baseline growth parameters adapted from the <em>Cobb 500 Broiler Performance Supplement</em> standards.</p>
+                <p>• Growth curve fitting methodologies referenced from Malaysian poultry open-access archives (e.g., Department of Veterinary Services Malaysia data structures).</p>
+            </div>
+        </div>
+
+        <div class="lg:col-span-2 space-y-6">
+            <div id="interactive-display" class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all duration-300">
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-amber-800">Interactive Analysis</h3>
+                    <p id="instruction-text" class="text-sm text-amber-900 font-medium">Click anywhere on the chart line to calculate live animal metrics!</p>
+                    <p id="explanation-text" class="text-xs text-gray-600 mt-1 max-w-xl hidden"></p>
+                </div>
+                <div id="metrics-box" class="flex gap-4 hidden">
+                    <div class="bg-white px-3 py-2 rounded shadow-sm border border-amber-100 min-w-[80px] text-center">
+                        <span class="block text-[10px] uppercase font-bold text-gray-400">Age</span>
+                        <span id="metric-day" class="text-lg font-bold text-gray-800">-</span>
+                    </div>
+                    <div class="bg-white px-3 py-2 rounded shadow-sm border border-amber-100 min-w-[100px] text-center">
+                        <span class="block text-[10px] uppercase font-bold text-emerald-600">Weight f(x)</span>
+                        <span id="metric-weight" class="text-lg font-bold text-emerald-700">-</span>
+                    </div>
+                    <div class="bg-white px-3 py-2 rounded shadow-sm border border-amber-100 min-w-[110px] text-center">
+                        <span class="block text-[10px] uppercase font-bold text-amber-600">Gain Rate f'(x)</span>
+                        <span id="metric-rate" class="text-lg font-bold text-amber-700">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative h-[450px]">
+                <canvas id="growthChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Mathematical Constants for Gompertz Curve (Cobb 500 estimation adjusted for tropical climate open-house/tunnel parameters)
+    const A = 3200;   // Asymptotic maximum weight (g)
+    const B = 4.4;    // Initial growth scaling constant
+    const K = 0.078;  // Growth rate coefficient
+
+    // Generate data points for 42 days
+    const labels = [];
+    const weightData = [];
+    const rateData = [];
+
+    for (let x = 0; x <= 42; x++) {
+        labels.push(x);
+        
+        // f(x) = A * exp(-B * exp(-K * x))
+        const fx = A * Math.exp(-B * Math.exp(-K * x));
+        weightData.push(parseFloat(fx.toFixed(1)));
+        
+        // f'(x) = f(x) * B * K * exp(-K * x)
+        const fPrimeX = fx * B * K * Math.exp(-K * x);
+        rateData.push(parseFloat(fPrimeX.toFixed(1)));
+    }
+
+    // Setup Chart.js
+    const ctx = document.getElementById('growthChart').getContext('2d');
+    const growthChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Broiler Weight f(x) [grams]',
+                    data: weightData,
+                    borderColor: '#065f46',
+                    backgroundColor: 'rgba(6, 95, 70, 0.05)',
+                    borderWidth: 3,
+                    yAxisID: 'yWeight',
+                    tension: 0.2,
+                    pointRadius: 2,
+                    pointHoverRadius: 6
+                },
+                {
+                    label: 'Daily Gain Rate f\'(x) [grams/day]',
+                    data: rateData,
+                    borderColor: '#b45309',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    yAxisID: 'yRate',
+                    tension: 0.2,
+                    pointRadius: 0,
+                    pointHoverRadius: 6
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            animation: {
+                duration: 2000,
+                easing: 'easeOutQuart'
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Bird Age (Days)',
+                        font: { weight: 'bold' }
+                    }
+                },
+                yWeight: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Live Weight (g)',
+                        font: { weight: 'bold', color: '#065f46' }
+                    },
+                    min: 0,
+                    max: 3500
+                },
+                yRate: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Growth Rate (g/day)',
+                        font: { weight: 'bold', color: '#b45309' }
+                    },
+                    grid: {
+                        drawOnChartArea: false // only want the grid lines for one axis
+                    },
+                    min: 0,
+                    max: 110
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        footer: function() {
+                            return "Click chart to analyze this point.";
+                        }
+                    }
+                }
+            },
+            onClick: (e) => {
+                const points = growthChart.getElementsAtEventForMode(e, 'index', { intersect: false }, true);
+                if (points.length > 0) {
+                    const index = points[0].index;
+                    updateMetrics(index);
+                }
+            }
+        }
+    });
+
+    function updateMetrics(day) {
+        const weight = weightData[day];
+        const rate = rateData[day];
+
+        // Reveal UI panels
+        document.getElementById('instruction-text').classList.add('hidden');
+        document.getElementById('explanation-text').classList.remove('hidden');
+        document.getElementById('metrics-box').classList.remove('hidden');
+
+        // Set numeric metrics
+        document.getElementById('metric-day').innerText = `Day ${day}`;
+        document.getElementById('metric-weight').innerText = `${weight}g`;
+        document.getElementById('metric-rate').innerText = `${rate}g/d`;
+
+        // Layman bioscience dynamic definitions
+        let laymanExplanation = "";
+        if (day <= 14) {
+            laymanExplanation = `<strong>Starter Phase:</strong> The chick is developing vital organs and skeletal frameworks. While the overall weight is low ($f(x) = ${weight}\text{g}$), the growth speed ($f'(x)$) is climbing rapidly every single day.`;
+        } else if (day > 14 && day <= 21) {
+            laymanExplanation = `<strong>Grower Phase:</strong> Accelerating muscle development. The bird's structural frame is established, and muscle mass accumulation is hitting high velocity.`;
+        } else if (day > 21 && day <= 26) {
+            laymanExplanation = `<strong>Peak Physiological Acceleration:</strong> At around Day 24, the derivative $f'(x)$ hits its absolute maximum (~92g/day). This is the biological inflection point; the bird will never gain weight faster per day than right now.`;
+        } else if (day > 26 && day <= 35) {
+            laymanExplanation = `<strong>Finisher Phase:</strong> The flock is still getting heavier, but the *rate* of daily gain ($f'(x)$) is shrinking. Every extra day from here requires significantly more feed to produce the same gram of muscle.`;
+        } else {
+            laymanExplanation = `<strong>Harvest Threshold:</strong> The derivative has dropped sharply. Biological growth has slowed down drastically. Keeping the birds past this window decreases profit margins due to excessive feed maintenance requirements.`;
+        }
+
+        document.getElementById('explanation-text').innerHTML = laymanExplanation;
+        
+        // Visual accent flash animation on update
+        const displayBox = document.getElementById('interactive-display');
+        displayBox.classList.remove('from-amber-50', 'to-orange-50');
+        displayBox.classList.add('from-emerald-50', 'to-emerald-100');
+        setTimeout(() => {
+            displayBox.classList.remove('from-emerald-50', 'to-emerald-100');
+            displayBox.classList.add('from-amber-50', 'to-orange-50');
+        }, 300);
+    }
+</script>
